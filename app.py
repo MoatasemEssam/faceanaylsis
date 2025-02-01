@@ -10,29 +10,18 @@ def run_app():
     # ... rest of your app logic ...
 
 def main():
-    # Retrieve AWS credentials from environment variables
-    aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
-    aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
-    aws_region = os.environ.get('AWS_DEFAULT_REGION', 'us-east-1')  # Default to 'us-east-1' if not set
+    aws_access_key_id = st.secrets["aws"]["access_key_id"]
+    aws_secret_access_key = st.secrets["aws"]["secret_access_key"]
+    aws_region = st.secrets["aws"]["region"]
 
-    if not aws_access_key_id or not aws_secret_access_key:
-        st.error("AWS credentials are not set in environment variables.")
-        return
+    # Initialize Rekognition client
+    rekognition = boto3.client(
+        'rekognition',
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+        region_name=aws_region
+    )
 
-    # Initialize Rekognition client with credentials
-    try:
-        rekognition = boto3.client(
-            'rekognition',
-            aws_access_key_id=aws_access_key_id,
-            aws_secret_access_key=aws_secret_access_key,
-            region_name=aws_region
-        )
-    except botocore.exceptions.NoCredentialsError:
-        st.error("AWS credentials not found. Please set them in environment variables.")
-        return
-    except Exception as e:
-        st.error(f"An error occurred initializing Rekognition client: {str(e)}")
-        return
 
 
     # Image upload
