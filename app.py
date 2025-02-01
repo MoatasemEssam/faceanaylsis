@@ -14,8 +14,11 @@ def main():
     st.title("AWS Rekognition Face Analysis")
     st.write("Upload an image to detect faces and display age range, gender, and emotion using AWS Rekognition.")
 
+    
+    AWS_REGION = 'us-east-1'
     # AWS Rekognition client
-    rekognition = boto3.client('rekognition')
+    rekognition = boto3.client('rekognition', region_name=AWS_REGION)
+
 
     # Image upload
     uploaded_file = st.file_uploader("Choose an image...", type=['jpg', 'jpeg', 'png'])
