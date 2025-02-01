@@ -1,29 +1,34 @@
 import streamlit as st
 import boto3
+import os
+import botocore.exceptions
 import io
 from PIL import Image, ImageDraw, ImageFont
 
-def get_multiline_text_size(text, font, draw):
-    # Get the bounding box of the text
-    bbox = draw.multiline_textbbox((0, 0), text, font=font)
-    width = bbox[2] - bbox[0]
-    height = bbox[3] - bbox[1]
-    return width, height
+def run_app():
+    st.title("AWS Rekognition Face Analysis")
+    # ... rest of your app logic ...
 
 def main():
-    st.title("AWS Rekognition Face Analysis")
-    st.write("Upload an image to detect faces and display age range, gender, and emotion using AWS Rekognition.")
+    # Retrieve AWS credentials from environment variables
+    aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
+    aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    aws_region = os.environ.get('AWS_DEFAULT_REGION', 'us-east-1')  # Default to 'us-east-1' if not set
 
-    AWS_REGION = 'us-east-1'  # Replace with your AWS region
-
-    try:
-        # Initialize Rekognition client
-        rekognition = boto3.client('rekognition', region_name=AWS_REGION)
-    except botocore.exceptions.NoCredentialsError:
-        st.error("AWS credentials not found. Please configure your AWS credentials.")
+    if not aws_access_key_id or not aws_secret_access_key:
+        st.error("AWS credentials are not set in environment variables.")
         return
-    except botocore.exceptions.PartialCredentialsError:
-        st.error("Incomplete AWS credentials found. Please check your configuration.")
+
+    # Initialize Rekognition client with credentials
+    try:
+        rekognition = boto3.client(
+            'rekognition',
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            region_name=aws_region
+        )
+    except botocore.exceptions.NoCredentialsError:
+        st.error("AWS credentials not found. Please set them in environment variables.")
         return
     except Exception as e:
         st.error(f"An error occurred initializing Rekognition client: {str(e)}")
