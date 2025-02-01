@@ -5,14 +5,25 @@ import botocore.exceptions
 import io
 from PIL import Image, ImageDraw, ImageFont
 
-def run_app():
-    st.title("AWS Rekognition Face Analysis")
-    # ... rest of your app logic ...
+def get_multiline_text_size(text, font, draw):
+    try:
+        # Use draw.multiline_textbbox if available (Pillow >= 8.0.0)
+        bbox = draw.multiline_textbbox((0, 0), text, font=font)
+        width = bbox[2] - bbox[0]
+        height = bbox[3] - bbox[1]
+    except AttributeError:
+        # Fallback for older versions of Pillow
+        lines = text.split('\n')
+        widths = [font.getsize(line)[0] for line in lines]
+        heights = [font.getsize(line)[1] for line in lines]
+        width = max(widths)
+        height = sum(heights)
+    return width, height
 
 def main():
     aws_access_key_id = st.secrets["aws"]["access_key_id"]
     aws_secret_access_key = st.secrets["aws"]["secret_access_key"]
-    aws_region = st.secrets["aws"]["region"]
+    aws_region = st.secrets.get("aws", {}).get("region", "us-east-1")
 
     # Initialize Rekognition client
     rekognition = boto3.client(
@@ -21,8 +32,6 @@ def main():
         aws_secret_access_key=aws_secret_access_key,
         region_name=aws_region
     )
-
-
 
     # Image upload
     uploaded_file = st.file_uploader("Choose an image...", type=['jpg', 'jpeg', 'png'])
@@ -60,7 +69,7 @@ def main():
                     # Create a copy of the image to draw on
                     img_draw = image.copy()
                     draw = ImageDraw.Draw(img_draw)
-                    # Optionally, use a TrueType font for better text rendering
+                    # Use a TrueType font or default font
                     try:
                         font = ImageFont.truetype("arial.ttf", size=14)
                     except IOError:
@@ -81,13 +90,13 @@ def main():
                         height = img_height * box['Height']
 
                         # Draw rectangle
-                        points = (
+                        points = [
                             (left, top),
                             (left + width, top),
                             (left + width, top + height),
                             (left, top + height),
                             (left, top)
-                        )
+                        ]
                         draw.line(points, fill='#00d400', width=2)
 
                         # Extract face attributes
@@ -98,25 +107,31 @@ def main():
                         # Prepare label text
                         label = f"Age: {age_range['Low']}-{age_range['High']}\nGender: {gender}\nEmotion: {emotion}"
 
-                        # Calculate text size using draw.multiline_textbbox
+                        # Calculate text size
                         try:
                             text_width, text_height = get_multiline_text_size(label, font, draw)
-                        except AttributeError:
-                            st.error("Your Pillow library version may not support 'multiline_textbbox'. Please update Pillow to the latest version.")
+                        except Exception as e:
+                            st.error(f"Error calculating text size: {str(e)}")
                             return
+
+                        # Adjust label position to prevent overflow
+                        label_x = left
+                        label_y = top - text_height - 10
+                        if label_y < 0:
+                            label_y = top + height + 10  # Place label below the bounding box if it doesn't fit above
 
                         # Define text background rectangle
                         text_background = [
-                            left,
-                            top - text_height - 10,
-                            left + text_width + 10,
-                            top
+                            label_x,
+                            label_y,
+                            label_x + text_width + 10,
+                            label_y + text_height + 10
                         ]
                         # Draw background rectangle
                         draw.rectangle(text_background, fill='#000000')
                         # Draw text
                         draw.multiline_text(
-                            (left + 5, top - text_height - 5),
+                            (label_x + 5, label_y + 5),
                             label,
                             fill='#FFFFFF',
                             font=font
