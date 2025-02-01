@@ -14,10 +14,20 @@ def main():
     st.title("AWS Rekognition Face Analysis")
     st.write("Upload an image to detect faces and display age range, gender, and emotion using AWS Rekognition.")
 
-    
-    AWS_REGION = 'us-east-1'
-    # AWS Rekognition client
-    rekognition = boto3.client('rekognition', region_name=AWS_REGION)
+    AWS_REGION = 'us-east-1'  # Replace with your AWS region
+
+    try:
+        # Initialize Rekognition client
+        rekognition = boto3.client('rekognition', region_name=AWS_REGION)
+    except botocore.exceptions.NoCredentialsError:
+        st.error("AWS credentials not found. Please configure your AWS credentials.")
+        return
+    except botocore.exceptions.PartialCredentialsError:
+        st.error("Incomplete AWS credentials found. Please check your configuration.")
+        return
+    except Exception as e:
+        st.error(f"An error occurred initializing Rekognition client: {str(e)}")
+        return
 
 
     # Image upload
